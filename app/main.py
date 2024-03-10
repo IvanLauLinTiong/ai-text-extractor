@@ -25,11 +25,12 @@ class Settings(BaseSettings):
 def get_settings():
     return Settings()
 
-DEBUG = get_settings().debug # even match with uppercase DEBUG that defined in .env
-print(f"{DEBUG=}")
+# DEBUG = get_settings().debug # even match with uppercase DEBUG that defined in .env
+# print(f"{DEBUG=}")
 
 BASE_DIR = pathlib.Path(__file__).parent
 UPLOAD_DIR = BASE_DIR / "uploaded"
+
 app = FastAPI()
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
@@ -49,6 +50,9 @@ async def img_echo_view(file: UploadFile = File(...),  settings: Settings = Depe
     if not settings.echo_active:
         raise HTTPException(detail="Invalid enpoint", status_code=400)
 
+    # Make temporary uploaded dir
+    UPLOAD_DIR.mkdir(exist_ok=True)
+
     # convert bytes stream into bytes string
     bytes_str = io.BytesIO(await file.read())
     fname = pathlib.Path(file.filename)
@@ -56,7 +60,7 @@ async def img_echo_view(file: UploadFile = File(...),  settings: Settings = Depe
     dest = UPLOAD_DIR / f"{uuid.uuid1()}{fext}"
 
     # save the file into dest
-    with open(str(dest), 'wb') as out:
+    with open(str(dest), "wb") as out:
         out.write(bytes_str.read())
 
     return dest
