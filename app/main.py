@@ -12,6 +12,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, HTMLResponse # HTMLResponse -> expect return HTML string
 from fastapi.templating import Jinja2Templates
+from PIL import Image
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -48,19 +49,28 @@ def home_detail_view():
 async def img_echo_view(file: UploadFile = File(...),  settings: Settings = Depends(get_settings)): # load the file in async manner
 
     if not settings.echo_active:
-        raise HTTPException(detail="Invalid enpoint", status_code=400)
+        raise HTTPException(detail="Invalid endpoint", status_code=400)
 
     # Make temporary uploaded dir
     UPLOAD_DIR.mkdir(exist_ok=True)
 
-    # convert bytes stream into bytes string
+    # Convert bytes stream into bytes string
     bytes_str = io.BytesIO(await file.read())
+
+    # Load the uploaded image
+    try:
+        img = Image.open(bytes_str)
+
+    except:
+        raise HTTPException(detail="Invalid image", status_code=400)
+
     fname = pathlib.Path(file.filename)
     fext = fname.suffix # .jpg, .txt
     dest = UPLOAD_DIR / f"{uuid.uuid1()}{fext}"
 
     # save the file into dest
-    with open(str(dest), "wb") as out:
-        out.write(bytes_str.read())
+    # with open(str(dest), "wb") as out:
+    #     out.write(bytes_str.read())
+    img.save(dest)
 
     return dest
