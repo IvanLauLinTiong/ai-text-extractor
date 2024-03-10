@@ -11,3 +11,4 @@ pydantic-settings
 aiofiles
 python-multipart
 pillow
+pytesseract

@@ -13,14 +13,31 @@ def test_get_home():
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
 
-def test_post_home():
+
+def test_post_invalid_file_upload_error():
     response = client.post("/")
-    assert response.status_code == 200
+    assert response.status_code == 422
     assert "application/json" in response.headers["content-type"]
-    assert response.json() == {"hello": "world"}
 
 
-def test_img_echo():
+def test_prediction_upload():
+    img_saved_path = BASE_DIR / "images"
+    for path in img_saved_path.glob("*"):
+        try:
+            img = Image.open(path)
+        except:
+            img = None
+
+        response = client.post("/", files={"file": open(path, "rb")})
+        if img is None:
+            assert response.status_code == 400
+        else:
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data.keys()) == 2
+
+
+def test_img_upload():
     img_saved_path = BASE_DIR / "images"
     for path in img_saved_path.glob("*"):
         try:
@@ -37,6 +54,5 @@ def test_img_echo():
             echo_img = Image.open(r_stream)
             diff = ImageChops.difference(echo_img, img).getbbox()
             assert diff is None
-
     # time.sleep(3)
     shutil.rmtree(UPLOAD_DIR)

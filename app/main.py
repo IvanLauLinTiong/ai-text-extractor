@@ -1,6 +1,7 @@
 import io
 import pathlib
 import uuid
+import pytesseract
 from functools import lru_cache
 from fastapi import (
     FastAPI,
@@ -41,8 +42,21 @@ def home_view(request: Request, settings: Settings = Depends(get_settings)):
 
 
 @app.post("/")
-def home_detail_view():
-    return {"hello": "world"}
+async def prediction_view(file: UploadFile = File(...),  settings: Settings = Depends(get_settings)):
+
+    if not settings.echo_active:
+        raise HTTPException(detail="Invalid endpoint", status_code=400)
+
+    bytes_str = io.BytesIO(await file.read())
+    try:
+        img = Image.open(bytes_str)
+    except:
+        raise HTTPException(detail="Invalid image", status_code=400)
+
+    preds = pytesseract.image_to_string(img)
+    predictions = [p for p in preds.split("\n") if p]
+
+    return {"result": predictions, "original": preds}
 
 
 @app.post("/img-echo/",  response_class=FileResponse)
@@ -51,16 +65,10 @@ async def img_echo_view(file: UploadFile = File(...),  settings: Settings = Depe
     if not settings.echo_active:
         raise HTTPException(detail="Invalid endpoint", status_code=400)
 
-    # Make temporary uploaded dir
     UPLOAD_DIR.mkdir(exist_ok=True)
-
-    # Convert bytes stream into bytes string
     bytes_str = io.BytesIO(await file.read())
-
-    # Load the uploaded image
     try:
         img = Image.open(bytes_str)
-
     except:
         raise HTTPException(detail="Invalid image", status_code=400)
 
